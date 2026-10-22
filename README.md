@@ -1,4 +1,4 @@
-<img width="1920" height="1078" alt="image" src="https://github.com/user-attachments/assets/b686f36f-5d43-4edb-9851-776dba94c7ea" /># Voting API
+# Voting API
 
 Prueba Tecnica para NewInntech: API REST para gestionar un sistema de votaciones: registro de votantes y candidatos, emisión de votos (uno por votante), estadísticas y una gráfica de resultados generada con pandas.
 
