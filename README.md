@@ -150,13 +150,12 @@ curl -X DELETE http://127.0.0.1:8000/voters/1
 ## Capturas
 
 ### Estadísticas
-
-<img width="1920" height="1078" alt="image" src="https://github.com/user-attachments/assets/6e9c167b-e0b4-41d5-ba15-fbd9be8f60e4" />
-<img width="1920" height="1078" alt="image" src="https://github.com/user-attachments/assets/99c90c6e-9fe4-499d-a986-0209c800c9b9" />
+<img width="1917" height="1015" alt="image" src="https://github.com/user-attachments/assets/1e2bd14f-4775-4814-9386-a687b540285f" />
+<img width="1917" height="1017" alt="image" src="https://github.com/user-attachments/assets/a4ea03c2-2661-478e-8169-63b9afb2aca9" />
 
 ### Gráfica de votos
 
-<img width="1920" height="1078" alt="image" src="https://github.com/user-attachments/assets/a352d663-dc00-4820-833d-1b2034b53eb5" />
+<img width="1917" height="1007" alt="image" src="https://github.com/user-attachments/assets/3f5e5ed7-d6f3-4b64-b314-efff88cef3a4" />
 
 
 ## Reglas y decisiones de diseño
