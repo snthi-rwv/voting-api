@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from typing import Optional
+
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -6,6 +8,7 @@ from sqlalchemy.orm import Session
 from app import schemas
 from app.database import get_db
 from app.models import Candidate, Voter
+from app.utils import contains_pattern, count_rows
 
 router = APIRouter(prefix="/voters", tags=["Voters"])
 
@@ -33,6 +36,28 @@ def create_voter(data: schemas.VoterCreate, db: Session = Depends(get_db)):
         raise HTTPException(status.HTTP_409_CONFLICT, "Ya existe un votante con ese email")
     db.refresh(voter)
     return voter
+
+
+@router.get("", response_model=list[schemas.VoterOut])
+def list_voters(
+    response: Response,
+    name: Optional[str] = Query(None, min_length=1, description="Búsqueda parcial por nombre"),
+    email: Optional[str] = Query(None, min_length=1, description="Búsqueda parcial por email"),
+    has_voted: Optional[bool] = Query(None, description="Filtrar por si ya votó o no"),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
+    db: Session = Depends(get_db),
+):
+    query = select(Voter)
+    if name:
+        query = query.where(Voter.name.ilike(contains_pattern(name), escape="\\"))
+    if email:
+        query = query.where(Voter.email.ilike(contains_pattern(email), escape="\\"))
+    if has_voted is not None:
+        query = query.where(Voter.has_voted.is_(has_voted))
+
+    response.headers["X-Total-Count"] = str(count_rows(db, query))
+    return db.scalars(query.order_by(Voter.id).offset(skip).limit(limit)).all()
 
 
 @router.delete("/{voter_id}", status_code=status.HTTP_204_NO_CONTENT)

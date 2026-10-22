@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, status, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -6,12 +6,21 @@ from sqlalchemy.orm import Session
 from app import schemas
 from app.database import get_db
 from app.models import Candidate, Vote, Voter
+from app.security import get_current_user
 from app.services.chart_service import build_votes_chart
 
 router = APIRouter(prefix="/votes", tags=["Votes"])
 
+# Se aplica solo a POST y GET "/": las estadísticas y la gráfica son públicas
+protected = [Depends(get_current_user)]
 
-@router.post("", response_model=schemas.VoteOut, status_code=status.HTTP_201_CREATED)
+
+@router.post(
+    "",
+    response_model=schemas.VoteOut,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=protected,
+)
 def create_vote(data: schemas.VoteCreate, db: Session = Depends(get_db)):
     # Validación: el votante y el candidato deben existir
     if not db.get(Voter, data.voter_id):
@@ -50,7 +59,7 @@ def create_vote(data: schemas.VoteCreate, db: Session = Depends(get_db)):
     return vote
 
 
-@router.get("", response_model=list[schemas.VoteOut])
+@router.get("", response_model=list[schemas.VoteOut], dependencies=protected)
 def list_votes(
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
@@ -91,6 +100,8 @@ def vote_statistics(db: Session = Depends(get_db)):
             for row in rows
         ],
     )
+
+
 @router.get(
     "/chart",
     response_class=Response,

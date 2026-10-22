@@ -60,3 +60,8 @@ class VoteStatistics(BaseModel):
     total_voters_who_voted: int
     total_registered_voters: int
     candidates: list[CandidateStats]
+
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str = "bearer"

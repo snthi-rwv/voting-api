@@ -1,10 +1,13 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from typing import Optional
+
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app import schemas
 from app.database import get_db
 from app.models import Candidate, Voter
+from app.utils import contains_pattern, count_rows
 
 router = APIRouter(prefix="/candidates", tags=["Candidates"])
 
@@ -27,8 +30,19 @@ def create_candidate(data: schemas.CandidateCreate, db: Session = Depends(get_db
 
 @router.get("", response_model=list[schemas.CandidateOut])
 def list_candidates(
+    response: Response,
+    name: Optional[str] = Query(None, min_length=1, description="Búsqueda parcial por nombre"),
+    party: Optional[str] = Query(None, min_length=1, description="Búsqueda parcial por partido"),
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
     db: Session = Depends(get_db),
 ):
-    return db.scalars(select(Candidate).order_by(Candidate.id).offset(skip).limit(limit)).all()
+    query = select(Candidate)
+    if name:
+        query = query.where(Candidate.name.ilike(contains_pattern(name), escape="\\"))
+    if party:
+        query = query.where(Candidate.party.ilike(contains_pattern(party), escape="\\"))
+
+    # Total de resultados (antes de paginar), útil para que el cliente arme su paginación
+    response.headers["X-Total-Count"] = str(count_rows(db, query))
+    return db.scalars(query.order_by(Candidate.id).offset(skip).limit(limit)).all()
