@@ -265,13 +265,15 @@ curl "http://127.0.0.1:8000/voters?has_voted=false&name=ana" \
 
 ### Estadísticas
 
-![Estadísticas de la votación](docs/statistics.png)
+<img width="1593" height="495" alt="image" src="https://github.com/user-attachments/assets/137fa04a-8cae-4d40-a5b6-90acfd72d334" />
+
 
 ### Gráfica de votos
 
 La gráfica muestra a los candidatos en el eje horizontal (X) y la cantidad de votos en el eje vertical (Y). Siempre refleja el estado actual de la votación, y los candidatos sin votos aparecen con una barra en cero.
 
-![Gráfica de votos por candidato](docs/chart.png)
+<img width="1207" height="757" alt="image" src="https://github.com/user-attachments/assets/ce307f4d-c088-4939-83ea-8dcb5e4ec488" />
+
 
 ## Reglas de la votación
 
