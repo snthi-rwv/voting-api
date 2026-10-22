@@ -8,10 +8,9 @@ Prueba Técnica de NewInntech: Una API para manejar una votación: registrar vot
 
 1. [¿Qué puede hacer?](#qué-puede-hacer)
 2. [Cómo ejecutarlo en tu computador](#cómo-ejecutarlo-en-tu-computador)
-3. [Probarlo en 2 minutos](#probarlo-en-2-minutos)
+3. [Probarlo](#probarlo)
 4. [Endpoints disponibles](#endpoints-disponibles)
 5. [Acceso con usuario y clave](#acceso-con-usuario-y-clave)
-6. [Ejemplos con curl](#ejemplos-con-curl)
 7. [Filtros y paginación](#filtros-y-paginación)
 8. [Capturas](#capturas)
 9. [Reglas de la votación](#reglas-de-la-votación)
@@ -19,7 +18,6 @@ Prueba Técnica de NewInntech: Una API para manejar una votación: registrar vot
 11. [Pruebas automáticas](#pruebas-automáticas)
 12. [Estructura del proyecto](#estructura-del-proyecto)
 13. [Problemas comunes](#problemas-comunes)
-14. [Mejoras futuras](#mejoras-futuras)
 
 ## ¿Qué puede hacer?
 
@@ -161,77 +159,6 @@ Si no envías token, o está vencido o es falso, la API responde con error `401`
 
 El usuario y la clave se definen en el archivo `.env`. Si usaste el `.env.example`, son `admin` y `admin12345`.
 
-## Ejemplos con curl
-
-`curl` es una herramienta para hacer peticiones desde la terminal. Si prefieres, puedes hacer lo mismo con Swagger (`/docs`) o con Postman.
-
-> En Windows PowerShell escribe `curl.exe` en lugar de `curl`, y las comillas del JSON pueden dar problemas. Si te pasa, usa Swagger o Postman.
-
-**Paso 1: pedir el token**
-
-```bash
-curl -X POST http://127.0.0.1:8000/auth/login \
-  -d "username=admin&password=admin12345"
-```
-
-La respuesta se ve así:
-
-```json
-{"access_token": "eyJhbGciOi...", "token_type": "bearer"}
-```
-
-**Paso 2: guardar el token y usarlo**
-
-```bash
-TOKEN="pega-aqui-el-access_token"
-
-# Registrar un votante
-curl -X POST http://127.0.0.1:8000/voters \
-  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
-  -d '{"name": "Ana Gómez", "email": "ana.gomez@mail.com"}'
-
-# Registrar un candidato
-curl -X POST http://127.0.0.1:8000/candidates \
-  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
-  -d '{"name": "Carlos Ruiz", "party": "Partido Verde"}'
-
-# Registrar un voto
-curl -X POST http://127.0.0.1:8000/votes \
-  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
-  -d '{"voter_id": 1, "candidate_id": 1}'
-
-# Ver todos los votos
-curl http://127.0.0.1:8000/votes -H "Authorization: Bearer $TOKEN"
-
-# Eliminar un votante
-curl -X DELETE http://127.0.0.1:8000/voters/1 -H "Authorization: Bearer $TOKEN"
-```
-
-**Estos dos no necesitan token:**
-
-```bash
-# Estadísticas
-curl http://127.0.0.1:8000/votes/statistics
-
-# Descargar la gráfica
-curl http://127.0.0.1:8000/votes/chart --output chart.png
-```
-
-### Cómo se ven las estadísticas
-
-```json
-{
-  "total_votes": 3,
-  "total_voters_who_voted": 3,
-  "total_registered_voters": 5,
-  "candidates": [
-    {"candidate_id": 1, "name": "Carlos Ruiz", "party": "Partido Verde", "votes": 2, "percentage": 66.67},
-    {"candidate_id": 2, "name": "Laura Mejía", "party": "Alianza Ciudadana", "votes": 1, "percentage": 33.33},
-    {"candidate_id": 3, "name": "Pedro Salazar", "party": null, "votes": 0, "percentage": 0.0}
-  ]
-}
-```
-
 ## Filtros y paginación
 
 Las listas de votantes y candidatos se pueden filtrar y dividir en páginas.
@@ -349,10 +276,3 @@ Falta el token. Haz login y envía el encabezado `Authorization: Bearer TU_TOKEN
 
 **Cambié un modelo y las tablas no se actualizan.**
 Las tablas solo se crean la primera vez. Durante el desarrollo, borra las tablas en PostgreSQL y reinicia la API para que se creen de nuevo.
-
-## Mejoras futuras
-
-- Migraciones de base de datos (con Alembic) para cambiar las tablas sin borrarlas.
-- Varios usuarios con roles, en lugar de un único administrador.
-- Pruebas contra PostgreSQL real, incluyendo votos simultáneos.
-- Más filtros en la lista de votos.
