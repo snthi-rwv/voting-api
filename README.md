@@ -1,138 +1,223 @@
 # Voting API
 
-Prueba Tecnica para NewInntech: API REST para gestionar un sistema de votaciones: registro de votantes y candidatos, emisión de votos (uno por votante), estadísticas y una gráfica de resultados generada con pandas.
+Prueba Técnica de NewInntech: Una API para manejar una votación: registrar votantes y candidatos, votar (una sola vez por persona), ver los resultados y generar una gráfica con los votos de cada candidato.
 
-**Stack:** Python · FastAPI · PostgreSQL · SQLAlchemy · pandas / matplotlib · pytest
+**Hecho con:** Python · FastAPI · PostgreSQL · pandas
 
 ## Contenido
 
-1. [Características](#características)
-2. [Instalación y ejecución](#instalación-y-ejecución)
-3. [Tests](#tests)
-4. [Endpoints](#endpoints)
-5. [Ejemplos de uso](#ejemplos-de-uso)
-6. [Capturas](#capturas)
-7. [Reglas y decisiones de diseño](#reglas-y-decisiones-de-diseño)
-8. [Estructura del proyecto](#estructura-del-proyecto)
+1. [¿Qué puede hacer?](#qué-puede-hacer)
+2. [Cómo ejecutarlo en tu computador](#cómo-ejecutarlo-en-tu-computador)
+3. [Probarlo en 2 minutos](#probarlo-en-2-minutos)
+4. [Endpoints disponibles](#endpoints-disponibles)
+5. [Acceso con usuario y clave](#acceso-con-usuario-y-clave)
+6. [Ejemplos con curl](#ejemplos-con-curl)
+7. [Filtros y paginación](#filtros-y-paginación)
+8. [Capturas](#capturas)
+9. [Reglas de la votación](#reglas-de-la-votación)
+10. [Errores que puede devolver la API](#errores-que-puede-devolver-la-api)
+11. [Pruebas automáticas](#pruebas-automáticas)
+12. [Estructura del proyecto](#estructura-del-proyecto)
+13. [Problemas comunes](#problemas-comunes)
+14. [Mejoras futuras](#mejoras-futuras)
 
-## Características
+## ¿Qué puede hacer?
 
-- Registro de votantes y candidatos con validación de datos.
-- Una misma persona no puede ser votante y candidato a la vez.
-- Cada votante vota una sola vez, garantizado en código y en la base de datos.
-- Registrar un voto actualiza `has_voted` y el contador del candidato en una sola transacción.
-- Estadísticas calculadas desde los votos reales registrados.
-- Gráfica de barras de votos por candidato (pandas + matplotlib).
-- Paginación en `GET /candidates` y `GET /votes`.
-- Documentación interactiva con Swagger.
+- Registrar votantes y candidatos.
+- Registrar votos. Cada votante solo puede votar una vez.
+- Impedir que una misma persona sea votante y candidato a la vez.
+- Mostrar estadísticas: votos por candidato, porcentajes y cuántas personas ya votaron.
+- Generar una gráfica de barras con los votos actuales (hecha con pandas).
+- Buscar y paginar las listas de votantes y candidatos.
+- Proteger las funciones de gestión con usuario y clave (JWT).
+- Incluir documentación interactiva (Swagger) para probar todo desde el navegador.
 
-## Instalación y ejecución
+## Cómo ejecutarlo en tu computador
 
-### Requisitos
+### Lo que necesitas
 
-- Python 3.12 o superior (desarrollado con 3.14)
-- PostgreSQL
+- Python 3.12 o superior (se desarrolló con 3.14).
+- PostgreSQL instalado y funcionando.
 
-### Pasos
+### Paso a paso
 
-1. Clonar el repositorio:
+**1. Descarga el proyecto**
 
 ```bash
 git clone https://github.com/snthi-rwv/voting-api.git
 cd voting-api
 ```
 
-2. Crear y activar el entorno virtual:
+**2. Crea un entorno virtual** (una "caja" aparte para las librerías del proyecto)
 
 ```bash
 python -m venv venv
-venv\Scripts\activate          # Windows
-# source venv/bin/activate     # Mac/Linux
 ```
 
-3. Instalar dependencias:
+Actívalo:
+
+```bash
+venv\Scripts\activate          # Windows
+source venv/bin/activate       # Mac y Linux
+```
+
+**3. Instala las librerías**
 
 ```bash
 pip install -r requirements.txt
 ```
 
-4. Crear una base de datos vacía en PostgreSQL llamada `voting_db`.
+**4. Crea la base de datos**
 
-5. Copiar `.env.example` a `.env` y ajustar usuario y contraseña:
+En PostgreSQL (por ejemplo desde pgAdmin) crea una base de datos vacía llamada `voting_db`. Las tablas se crean solas al iniciar la API.
+
+**5. Configura tus datos**
+
+Copia el archivo `.env.example` y llámalo `.env`:
+
+```bash
+copy .env.example .env         # Windows
+cp .env.example .env           # Mac y Linux
+```
+
+Abre `.env` y cambia `usuario` y `password` por los de tu PostgreSQL:
 
 ```
 DATABASE_URL=postgresql+psycopg://usuario:password@localhost:5432/voting_db
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=admin12345
+JWT_SECRET=change-me-please-use-a-long-random-secret-key
+ACCESS_TOKEN_EXPIRE_MINUTES=60
 ```
 
-6. Iniciar el servidor (las tablas se crean automáticamente al arrancar):
+Qué significa cada línea:
+
+| Variable | Para qué sirve |
+|---|---|
+| `DATABASE_URL` | Cómo conectarse a tu base de datos |
+| `ADMIN_USERNAME` y `ADMIN_PASSWORD` | Usuario y clave para entrar a la API |
+| `JWT_SECRET` | Texto secreto con el que se firman los tokens de acceso |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | Minutos que dura el acceso antes de pedir login otra vez |
+
+> Los valores de ejemplo sirven para probar en tu computador. Si usas el proyecto en otro lugar, cambia la clave y el secreto.
+
+**6. Inicia la API**
 
 ```bash
 uvicorn app.main:app --reload
 ```
 
-- API: http://127.0.0.1:8000
-- Documentación Swagger: http://127.0.0.1:8000/docs
+Ya está funcionando:
 
-## Tests
+- API: http://127.0.0.1:8000
+- Documentación interactiva: http://127.0.0.1:8000/docs
+
+## Probarlo en 2 minutos
+
+La forma más fácil es desde el navegador, sin instalar nada más:
+
+1. Abre http://127.0.0.1:8000/docs
+2. Pulsa el botón **Authorize** (arriba a la derecha), escribe el usuario y la clave de tu `.env` (con el ejemplo: `admin` y `admin12345`) y confirma.
+3. Crea un votante con `POST /voters` y un candidato con `POST /candidates`. Usa el botón **Try it out**.
+4. Registra un voto con `POST /votes`.
+5. Mira los resultados en `GET /votes/statistics` y la gráfica en http://127.0.0.1:8000/votes/chart
+
+## Endpoints disponibles
+
+Un endpoint es una dirección de la API a la que se le pide o se le envía información.
+
+| Método | Dirección | Qué hace | ¿Pide acceso? |
+|---|---|---|---|
+| POST | `/auth/login` | Entrar con usuario y clave y recibir un token | No |
+| POST | `/voters` | Registrar un votante | Sí |
+| GET | `/voters` | Listar votantes (con filtros) | Sí |
+| DELETE | `/voters/{id}` | Eliminar un votante | Sí |
+| POST | `/candidates` | Registrar un candidato | Sí |
+| GET | `/candidates` | Listar candidatos (con filtros) | Sí |
+| POST | `/votes` | Registrar un voto | Sí |
+| GET | `/votes` | Ver todos los votos emitidos | Sí |
+| GET | `/votes/statistics` | Ver estadísticas de la votación | No |
+| GET | `/votes/chart` | Ver la gráfica de votos (imagen PNG) | No |
+
+Los resultados (estadísticas y gráfica) son públicos a propósito: en una elección, cualquiera debería poder ver cómo va.
+
+### Datos que se guardan
+
+**Votante:** `id`, `name` (obligatorio), `email` (obligatorio y único), `has_voted` (empieza en `false`).
+
+**Candidato:** `id`, `name` (obligatorio), `party` (opcional), `votes` (empieza en 0).
+
+**Voto:** `id`, `voter_id` (quién votó) y `candidate_id` (por quién votó).
+
+## Acceso con usuario y clave
+
+Las funciones de gestión necesitan que te identifiques. El proceso es:
+
+1. Envías tu usuario y clave a `/auth/login`.
+2. La API te devuelve un **token**, que es como una llave temporal.
+3. Envías ese token en cada petición protegida.
+
+Si no envías token, o está vencido o es falso, la API responde con error `401`.
+
+El usuario y la clave se definen en el archivo `.env`. Si usaste el `.env.example`, son `admin` y `admin12345`.
+
+## Ejemplos con curl
+
+`curl` es una herramienta para hacer peticiones desde la terminal. Si prefieres, puedes hacer lo mismo con Swagger (`/docs`) o con Postman.
+
+> En Windows PowerShell escribe `curl.exe` en lugar de `curl`, y las comillas del JSON pueden dar problemas. Si te pasa, usa Swagger o Postman.
+
+**Paso 1: pedir el token**
 
 ```bash
-pytest -v
+curl -X POST http://127.0.0.1:8000/auth/login \
+  -d "username=admin&password=admin12345"
 ```
 
-Los tests usan SQLite en memoria, por lo que no tocan la base de datos PostgreSQL. Cubren las reglas del sistema: votos únicos, candidato inexistente, exclusión votante/candidato, actualización de `has_voted` y contadores, estadísticas y gráfica.
+La respuesta se ve así:
 
-## Endpoints
+```json
+{"access_token": "eyJhbGciOi...", "token_type": "bearer"}
+```
 
-| Método | Endpoint | Descripción | Respuestas |
-|---|---|---|---|
-| POST | `/voters` | Registrar un votante | 201, 409, 422 |
-| DELETE | `/voters/{id}` | Eliminar un votante | 204, 404 |
-| POST | `/candidates` | Registrar un candidato | 201, 409, 422 |
-| GET | `/candidates` | Listar candidatos (`skip`, `limit`) | 200 |
-| POST | `/votes` | Registrar un voto | 201, 404, 409, 422 |
-| GET | `/votes` | Listar votos (`skip`, `limit`) | 200 |
-| GET | `/votes/statistics` | Estadísticas de la votación | 200 |
-| GET | `/votes/chart` | Gráfica de votos (imagen PNG) | 200, 404 |
-
-## Ejemplos de uso
-
-### curl
+**Paso 2: guardar el token y usarlo**
 
 ```bash
+TOKEN="pega-aqui-el-access_token"
+
 # Registrar un votante
 curl -X POST http://127.0.0.1:8000/voters \
-  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
   -d '{"name": "Ana Gómez", "email": "ana.gomez@mail.com"}'
 
 # Registrar un candidato
 curl -X POST http://127.0.0.1:8000/candidates \
-  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
   -d '{"name": "Carlos Ruiz", "party": "Partido Verde"}'
-
-# Listar candidatos
-curl "http://127.0.0.1:8000/candidates?skip=0&limit=10"
 
 # Registrar un voto
 curl -X POST http://127.0.0.1:8000/votes \
-  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
   -d '{"voter_id": 1, "candidate_id": 1}'
 
-# Listar votos
-curl http://127.0.0.1:8000/votes
+# Ver todos los votos
+curl http://127.0.0.1:8000/votes -H "Authorization: Bearer $TOKEN"
 
+# Eliminar un votante
+curl -X DELETE http://127.0.0.1:8000/voters/1 -H "Authorization: Bearer $TOKEN"
+```
+
+**Estos dos no necesitan token:**
+
+```bash
 # Estadísticas
 curl http://127.0.0.1:8000/votes/statistics
 
 # Descargar la gráfica
 curl http://127.0.0.1:8000/votes/chart --output chart.png
-
-# Eliminar un votante
-curl -X DELETE http://127.0.0.1:8000/voters/1
 ```
 
-> En Windows PowerShell usa `curl.exe` en lugar de `curl` y escapa las comillas del JSON (`"{\"name\": \"Ana\"}"`), o usa Swagger o Postman.
-
-### Ejemplo de respuesta de `/votes/statistics`
+### Cómo se ven las estadísticas
 
 ```json
 {
@@ -147,37 +232,125 @@ curl -X DELETE http://127.0.0.1:8000/voters/1
 }
 ```
 
+## Filtros y paginación
+
+Las listas de votantes y candidatos se pueden filtrar y dividir en páginas.
+
+**Paginación (en todas las listas):**
+
+- `skip`: cuántos resultados saltar (por defecto 0).
+- `limit`: cuántos resultados traer (por defecto 50, máximo 200).
+- El total de resultados, sin dividir en páginas, viene en el encabezado de la respuesta `X-Total-Count`.
+
+**Filtros disponibles:**
+
+| Lista | Filtros |
+|---|---|
+| `GET /candidates` | `name` y `party`: buscan texto parcial, sin importar mayúsculas |
+| `GET /voters` | `name` y `email`: buscan texto parcial. `has_voted`: `true` o `false` |
+
+**Ejemplos:**
+
+```bash
+# Candidatos del partido "verde", primeros 10
+curl "http://127.0.0.1:8000/candidates?party=verde&skip=0&limit=10" \
+  -H "Authorization: Bearer $TOKEN"
+
+# Votantes que todavía no han votado y cuyo nombre contiene "ana"
+curl "http://127.0.0.1:8000/voters?has_voted=false&name=ana" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
 ## Capturas
 
 ### Estadísticas
-<img width="1917" height="1015" alt="image" src="https://github.com/user-attachments/assets/1e2bd14f-4775-4814-9386-a687b540285f" />
-<img width="1917" height="1017" alt="image" src="https://github.com/user-attachments/assets/a4ea03c2-2661-478e-8169-63b9afb2aca9" />
+
+![Estadísticas de la votación](docs/statistics.png)
 
 ### Gráfica de votos
 
-<img width="1917" height="1007" alt="image" src="https://github.com/user-attachments/assets/3f5e5ed7-d6f3-4b64-b314-efff88cef3a4" />
+La gráfica muestra a los candidatos en el eje horizontal (X) y la cantidad de votos en el eje vertical (Y). Siempre refleja el estado actual de la votación, y los candidatos sin votos aparecen con una barra en cero.
 
+![Gráfica de votos por candidato](docs/chart.png)
 
-## Reglas y decisiones de diseño
+## Reglas de la votación
 
-- **Un voto por votante:** `has_voted` se marca con un `UPDATE ... WHERE has_voted = false` y además `votes.voter_id` es `UNIQUE`, así dos peticiones simultáneas no pueden duplicar el voto.
-- **Consistencia:** el voto, `has_voted` y el contador del candidato se guardan en una sola transacción; si algo falla, no queda nada a medias. El contador se incrementa en la base de datos (`votes = votes + 1`), no en Python.
-- **Votante y candidato no pueden ser la misma persona:** como el modelo del candidato no tiene email, la comparación se hace por nombre normalizado (sin espacios extra y sin distinguir mayúsculas). Limitación: dos personas distintas con el mismo nombre chocarían.
-- **Eliminar un votante que ya votó:** se elimina también su voto y se descuenta del candidato, para que las estadísticas reflejen los votos reales.
-- **Estadísticas y gráfica** se calculan desde la tabla `votes`; los candidatos sin votos aparecen con 0.
-- **Códigos HTTP:** `201` creación, `204` borrado, `404` recurso inexistente, `409` conflicto (duplicados), `422` datos inválidos.
+- **Un voto por persona.** Si alguien intenta votar de nuevo, la API lo rechaza. Esto está protegido en el código y también en la base de datos, para que ni dos peticiones simultáneas puedan duplicar un voto.
+- **Todo o nada.** Al votar, se guarda el voto, se marca al votante como "ya votó" y se suma 1 al candidato. Estas tres cosas ocurren juntas: si una falla, ninguna se guarda.
+- **Votante o candidato, no ambos.** Como el candidato no tiene correo, la API compara los nombres (sin importar mayúsculas ni espacios de más). Limitación: dos personas distintas con el mismo nombre se bloquearían entre sí.
+- **Si se elimina un votante que ya votó,** su voto también se elimina y se resta al candidato, para que los resultados sigan siendo reales.
+- **Las estadísticas y la gráfica se calculan con los votos registrados,** no con números guardados aparte.
+
+## Errores que puede devolver la API
+
+| Código | Significa | Ejemplo |
+|---|---|---|
+| 200 | Todo salió bien | Consultar candidatos |
+| 201 | Se creó correctamente | Registrar un votante |
+| 204 | Se eliminó correctamente | Eliminar un votante |
+| 401 | Falta el token o no es válido | Pedir `/candidates` sin hacer login |
+| 404 | No existe lo que se busca | Votar por un candidato que no existe |
+| 409 | Conflicto con algo existente | Votar dos veces, o repetir un email |
+| 422 | Los datos enviados no son válidos | Email mal escrito o nombre vacío |
+
+Los errores traen un mensaje explicando qué pasó, por ejemplo: `{"detail": "Este votante ya emitió su voto"}`.
+
+## Pruebas automáticas
+
+El proyecto incluye pruebas que verifican las reglas importantes: votos únicos, candidato inexistente, filtros, paginación, acceso con token y gráfica.
+
+```bash
+pytest -v
+```
+
+Estas pruebas usan una base de datos temporal en memoria, así que no tocan tu base de datos real ni necesitan tu archivo `.env`.
 
 ## Estructura del proyecto
 
 ```
-app/
-├── main.py            # aplicación FastAPI
-├── config.py          # variables de entorno
-├── database.py        # conexión y sesión
-├── models.py          # modelos SQLAlchemy
-├── schemas.py         # esquemas Pydantic
-├── routers/           # endpoints (voters, candidates, votes)
-└── services/          # generación de la gráfica (pandas)
-tests/                 # tests con pytest
-docs/                  # capturas
+voting-api/
+├── app/
+│   ├── main.py          # Arranque de la aplicación
+│   ├── config.py        # Lectura de la configuración (.env)
+│   ├── database.py      # Conexión a la base de datos
+│   ├── models.py        # Tablas: votantes, candidatos y votos
+│   ├── schemas.py       # Forma de los datos que entran y salen
+│   ├── security.py      # Login y verificación del token
+│   ├── utils.py         # Ayudas para búsquedas y conteos
+│   ├── routers/         # Los endpoints, uno por tema
+│   │   ├── auth.py
+│   │   ├── voters.py
+│   │   ├── candidates.py
+│   │   └── votes.py
+│   └── services/
+│       └── chart_service.py   # Genera la gráfica con pandas
+├── tests/               # Pruebas automáticas
+├── docs/                # Capturas para este README
+├── .env.example         # Plantilla de configuración
+├── requirements.txt     # Lista de librerías
+└── pytest.ini           # Configuración de las pruebas
 ```
+
+## Problemas comunes
+
+**Al iniciar sale un error que menciona `admin_username` o `jwt_secret`.**
+Falta alguna línea en tu `.env`. Compáralo con `.env.example` y copia las líneas que falten.
+
+**Sale `password authentication failed` o `connection refused`.**
+El usuario o la clave de `DATABASE_URL` no coinciden con tu PostgreSQL, o PostgreSQL no está encendido.
+
+**Sale `database "voting_db" does not exist`.**
+Falta crear la base de datos vacía (paso 4).
+
+**Todas las peticiones dan `401`.**
+Falta el token. Haz login y envía el encabezado `Authorization: Bearer TU_TOKEN`, o usa el botón **Authorize** en `/docs`.
+
+**Cambié un modelo y las tablas no se actualizan.**
+Las tablas solo se crean la primera vez. Durante el desarrollo, borra las tablas en PostgreSQL y reinicia la API para que se creen de nuevo.
+
+## Mejoras futuras
+
+- Migraciones de base de datos (con Alembic) para cambiar las tablas sin borrarlas.
+- Varios usuarios con roles, en lugar de un único administrador.
+- Pruebas contra PostgreSQL real, incluyendo votos simultáneos.
+- Más filtros en la lista de votos.
